@@ -1,15 +1,12 @@
 {
   "name": "blackwell-mod-bot",
   "version": "1.0.0",
-  "description": "BlackWell Family Moderasyon Botu",
+  "description": "BlackWell Moderasyon Botu",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "discord.js": "^14.25.1"
-  },
-  "keywords": ["discord", "bot", "moderation"],
-  "author": "BlackWell Family",
-  "license": "ISC"
+  }
 }
