@@ -1,28 +1,29 @@
 const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField, StringSelectMenuBuilder, MessageFlags, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const fs = require('fs');
-const canvas = require('canvas');
-const { createCanvas, loadImage, registerFont } = canvas;
 
-// Configuration - Railway Variables'dan oku
-const config = {
-    ownerId: process.env.ownerId || "685921707667619908",
-    logChannelId: process.env.logChannelId || "1484352505620987964",
-    bossRoles: process.env.bossRoles ? process.env.bossRoles.split(',') : ["1435010471391657984"],
-    ogRoles: process.env.ogRoles ? process.env.ogRoles.split(',') : ["1435017895947145298"],
-    guildId: process.env.guildId,
-    clientId: process.env.clientId
-};
+// Canvas kontrolü (hata yönetimi)
+let canvas;
+try {
+    canvas = require('canvas');
+    const { createCanvas, loadImage, registerFont } = canvas;
+    console.log('✅ Canvas yüklendi!');
+} catch (error) {
+    console.log('⚠️ Canvas yüklenemedi, hoşgeldin kartları devre dışı');
+    canvas = null;
+}
 
-// GIF linkleri
-const GIFS = {
-    welcome: 'https://media.giphy.com/media/26gR2qGRnxxXAvHvW/giphy.gif',
-    ban: 'https://media.giphy.com/media/3o7abB06u9bNzA8LC8/giphy.gif',
-    kick: 'https://media.giphy.com/media/l0MYEqE4MWVdlV5Z2/giphy.gif',
-    mute: 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif',
-    warn: 'https://media.giphy.com/media/3o7TKoBHRKjPoeXyM/giphy.gif',
-    success: 'https://media.giphy.com/media/3o7abB06u9bNzA8LC8/giphy.gif',
-    error: 'https://media.giphy.com/media/3o7TKzR5QkqFJZzZ2/giphy.gif'
-};
+// Configuration - config.json'dan oku
+let config = {};
+try {
+    config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+} catch (error) {
+    console.error('❌ config.json dosyası bulunamadı!');
+    process.exit(1);
+}
+
+// Rolleri diziye çevir
+config.bossRoles = config.bossRoles ? config.bossRoles.split(',') : [];
+config.ogRoles = config.ogRoles ? config.ogRoles.split(',') : [];
 
 console.log('🔍 Config:', {
     tokenVarMi: !!config.token,
@@ -38,6 +39,17 @@ if (!config.token) {
     console.error('❌ HATA: Token bulunamadı!');
     process.exit(1);
 }
+
+// GIF linkleri
+const GIFS = {
+    welcome: 'https://media.giphy.com/media/26gR2qGRnxxXAvHvW/giphy.gif',
+    ban: 'https://media.giphy.com/media/3o7abB06u9bNzA8LC8/giphy.gif',
+    kick: 'https://media.giphy.com/media/l0MYEqE4MWVdlV5Z2/giphy.gif',
+    mute: 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif',
+    warn: 'https://media.giphy.com/media/3o7TKoBHRKjPoeXyM/giphy.gif',
+    success: 'https://media.giphy.com/media/3o7abB06u9bNzA8LC8/giphy.gif',
+    error: 'https://media.giphy.com/media/3o7TKzR5QkqFJZzZ2/giphy.gif'
+};
 
 // Veritabanı
 let warnings = {};
@@ -79,11 +91,11 @@ const client = new Client({
 // ===================== YETKİ KONTROL =====================
 function isBoss(member) {
     return member.permissions.has(PermissionsBitField.Flags.Administrator) || 
-           member.roles.cache.has("1435010471391657984");
+           member.roles.cache.has(config.bossRoles[0]);
 }
 
 function isOG(member) {
-    return member.roles.cache.has("1435017895947145298");
+    return member.roles.cache.has(config.ogRoles[0]);
 }
 
 function isStaff(member) {
@@ -101,132 +113,164 @@ async function sendLog(guild, embed) {
     }
 }
 
-// ===================== CANVAS HOŞGELDİN KARTI =====================
+// ===================== CANVAS HOŞGELDİN KARTI (DÜZELTİLDİ) =====================
 async function createWelcomeCard(member) {
-    const width = 800;
-    const height = 400;
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-
-    // Arkaplan gradient
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, '#1a1a2e');
-    gradient.addColorStop(1, '#16213e');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-
-    // Çerçeve
-    ctx.strokeStyle = '#e94560';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(20, 20, width - 40, height - 40);
-
-    // Avatar
+    if (!canvas) return null;
+    
     try {
-        const avatar = await loadImage(member.user.displayAvatarURL({ extension: 'png', size: 256 }));
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(width / 2, 120, 80, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(avatar, width / 2 - 80, 40, 160, 160);
-        ctx.restore();
+        const { createCanvas, loadImage } = canvas;
+        const width = 800;
+        const height = 400;
+        const canvasObj = createCanvas(width, height);
+        const ctx = canvasObj.getContext('2d');
 
-        // Avatar çerçevesi
-        ctx.beginPath();
-        ctx.arc(width / 2, 120, 82, 0, Math.PI * 2);
+        // Arkaplan gradient
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, '#1a1a2e');
+        gradient.addColorStop(1, '#16213e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        // Çerçeve
         ctx.strokeStyle = '#e94560';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-    } catch (err) {
-        console.error('Avatar yüklenemedi:', err);
+        ctx.lineWidth = 8;
+        ctx.strokeRect(20, 20, width - 40, height - 40);
+
+        // Avatar
+        try {
+            const avatarUrl = member.user.displayAvatarURL({ extension: 'png', size: 256 });
+            const avatar = await loadImage(avatarUrl);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(width / 2, 120, 80, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(avatar, width / 2 - 80, 40, 160, 160);
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.arc(width / 2, 120, 82, 0, Math.PI * 2);
+            ctx.strokeStyle = '#e94560';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        } catch (err) {
+            console.error('Avatar yüklenemedi:', err);
+        }
+
+        // Yazılar
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 36px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('HOŞ GELDİN!', width / 2, 240);
+
+        ctx.font = 'bold 28px "Segoe UI"';
+        ctx.fillStyle = '#e94560';
+        ctx.fillText(member.user.tag, width / 2, 290);
+
+        ctx.font = '20px "Segoe UI"';
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillText(`Sunucumuza katıldın! • Üye #${member.guild.memberCount}`, width / 2, 340);
+
+        ctx.font = '16px "Segoe UI"';
+        ctx.fillStyle = '#888888';
+        ctx.fillText(`ID: ${member.user.id} • Hesap: ${new Date(member.user.createdTimestamp).toLocaleDateString('tr-TR')}`, width / 2, 380);
+
+        return canvasObj.toBuffer();
+    } catch (error) {
+        console.error('Canvas hatası:', error);
+        return null;
     }
-
-    // Yazılar
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px "Segoe UI"';
-    ctx.textAlign = 'center';
-    ctx.fillText('HOŞ GELDİN!', width / 2, 240);
-
-    ctx.font = 'bold 28px "Segoe UI"';
-    ctx.fillStyle = '#e94560';
-    ctx.fillText(member.user.tag, width / 2, 290);
-
-    ctx.font = '20px "Segoe UI"';
-    ctx.fillStyle = '#aaaaaa';
-    ctx.fillText(`Sunucumuza katıldın! • Üye #${member.guild.memberCount}`, width / 2, 340);
-
-    ctx.font = '16px "Segoe UI"';
-    ctx.fillStyle = '#888888';
-    ctx.fillText(`ID: ${member.user.id} • Hesap: ${new Date(member.user.createdTimestamp).toLocaleDateString('tr-TR')}`, width / 2, 380);
-
-    return canvas.toBuffer();
 }
 
 async function createLeaveCard(member) {
-    const width = 800;
-    const height = 400;
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, '#1a1a2e');
-    gradient.addColorStop(1, '#16213e');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.strokeStyle = '#e94560';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(20, 20, width - 40, height - 40);
-
+    if (!canvas) return null;
+    
     try {
-        const avatar = await loadImage(member.user.displayAvatarURL({ extension: 'png', size: 256 }));
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(width / 2, 120, 80, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(avatar, width / 2 - 80, 40, 160, 160);
-        ctx.restore();
+        const { createCanvas, loadImage } = canvas;
+        const width = 800;
+        const height = 400;
+        const canvasObj = createCanvas(width, height);
+        const ctx = canvasObj.getContext('2d');
 
-        ctx.beginPath();
-        ctx.arc(width / 2, 120, 82, 0, Math.PI * 2);
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, '#1a1a2e');
+        gradient.addColorStop(1, '#16213e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
         ctx.strokeStyle = '#e94560';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-    } catch (err) {}
+        ctx.lineWidth = 8;
+        ctx.strokeRect(20, 20, width - 40, height - 40);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px "Segoe UI"';
-    ctx.textAlign = 'center';
-    ctx.fillText('GÜLE GÜLE!', width / 2, 240);
+        try {
+            const avatarUrl = member.user.displayAvatarURL({ extension: 'png', size: 256 });
+            const avatar = await loadImage(avatarUrl);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(width / 2, 120, 80, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(avatar, width / 2 - 80, 40, 160, 160);
+            ctx.restore();
 
-    ctx.font = 'bold 28px "Segoe UI"';
-    ctx.fillStyle = '#e94560';
-    ctx.fillText(member.user.tag, width / 2, 290);
+            ctx.beginPath();
+            ctx.arc(width / 2, 120, 82, 0, Math.PI * 2);
+            ctx.strokeStyle = '#e94560';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        } catch (err) {}
 
-    ctx.font = '20px "Segoe UI"';
-    ctx.fillStyle = '#aaaaaa';
-    ctx.fillText('Sunucumuzdan ayrıldı...', width / 2, 340);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 36px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('GÜLE GÜLE!', width / 2, 240);
 
-    ctx.font = '16px "Segoe UI"';
-    ctx.fillStyle = '#888888';
-    ctx.fillText(`ID: ${member.user.id} • Kalma süresi: ${member.joinedAt ? new Date().toLocaleDateString() : 'Bilinmiyor'}`, width / 2, 380);
+        ctx.font = 'bold 28px "Segoe UI"';
+        ctx.fillStyle = '#e94560';
+        ctx.fillText(member.user.tag, width / 2, 290);
 
-    return canvas.toBuffer();
+        ctx.font = '20px "Segoe UI"';
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillText('Sunucumuzdan ayrıldı...', width / 2, 340);
+
+        ctx.font = '16px "Segoe UI"';
+        ctx.fillStyle = '#888888';
+        const kalmaSuresi = member.joinedAt ? Math.floor((Date.now() - member.joinedAt) / (1000 * 60 * 60 * 24)) : '?';
+        ctx.fillText(`ID: ${member.user.id} • Kalma süresi: ${kalmaSuresi} gün`, width / 2, 380);
+
+        return canvasObj.toBuffer();
+    } catch (error) {
+        console.error('Canvas hatası:', error);
+        return null;
+    }
 }
 
-// ===================== TAG SİSTEMİ =====================
+// ===================== TAG SİSTEMİ (DÜZELTİLDİ) =====================
 async function checkAndAddTag(member) {
     if (!tagSistemi[member.guild.id]) return;
     
     const tag = tagSistemi[member.guild.id];
-    if (!member.user.username.startsWith(tag)) {
-        try {
-            await member.setNickname(`${tag} ${member.user.username}`);
-            console.log(`✅ Tag eklendi: ${member.user.tag} -> ${tag} ${member.user.username}`);
-        } catch (error) {
-            console.error('Tag eklenemedi:', error.message);
-        }
+    const currentName = member.nickname || member.user.username;
+    
+    // Tag zaten varsa ekleme
+    if (currentName.startsWith(tag)) return;
+    
+    try {
+        const newName = `${tag} ${member.user.username}`;
+        await member.setNickname(newName);
+        console.log(`✅ Tag eklendi: ${member.user.tag} -> ${newName}`);
+        
+        // Log gönder
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('🏷️ Tag Sistemi')
+            .setDescription(`${member.user.tag} kullanıcısına **${tag}** tagi eklendi!`)
+            .setThumbnail(member.user.displayAvatarURL())
+            .setTimestamp();
+        
+        await sendLog(member.guild, embed);
+    } catch (error) {
+        console.error('Tag eklenemedi:', error.message);
     }
 }
 
@@ -271,8 +315,9 @@ async function registerSlashCommands() {
 client.once('ready', async () => {
     console.log(`✅ ${client.user.tag} olarak giriş yapıldı!`);
     console.log(`📊 Sunucu sayısı: ${client.guilds.cache.size}`);
-    console.log(`👑 BOSS Rolü: <@&1435010471391657984>`);
-    console.log(`👥 OG Rolü: <@&1435017895947145298>`);
+    console.log(`👑 BOSS Rolü: <@&${config.bossRoles[0]}>`);
+    console.log(`👥 OG Rolü: <@&${config.ogRoles[0]}>`);
+    console.log(`🎨 Canvas durumu: ${canvas ? '✅ Aktif' : '❌ Pasif'}`);
     
     await registerSlashCommands();
     
@@ -287,6 +332,149 @@ client.once('ready', async () => {
         client.user.setActivity(activities[i % activities.length], { type: 3 });
         i++;
     }, 10000);
+});
+
+// ===================== ÜYE GİRİŞ - DÜZELTİLDİ =====================
+client.on('guildMemberAdd', async (member) => {
+    console.log(`👋 ${member.user.tag} sunucuya katıldı!`);
+    
+    // Tag sistemi
+    await checkAndAddTag(member);
+    
+    // Otorol
+    if (otorol[member.guild.id]) {
+        try {
+            const role = await member.guild.roles.fetch(otorol[member.guild.id]);
+            if (role) {
+                await member.roles.add(role);
+                console.log(`✅ Otorol verildi: ${member.user.tag} -> ${role.name}`);
+            }
+        } catch (error) {
+            console.error('Otorol hatası:', error);
+        }
+    }
+    
+    // Canvas hoşgeldin kartı
+    const welcomeBuffer = await createWelcomeCard(member);
+    
+    const embed = new EmbedBuilder()
+        .setColor(0x00FF00)
+        .setTitle('✨ **Yeni Üye Katıldı** ✨')
+        .setDescription(`${member.user.tag} aramıza katıldı!\n🎉 Hoş geldin!`)
+        .addFields(
+            { name: '👤 Kullanıcı', value: `${member.user.tag} (${member.user.id})`, inline: true },
+            { name: '📅 Hesap Oluşturma', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
+            { name: '📊 Üye Sırası', value: `**${member.guild.memberCount}**. üye`, inline: true }
+        )
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 512 }))
+        .setImage(GIFS.welcome)
+        .setTimestamp();
+
+    if (welcomeBuffer) {
+        const attachment = { attachment: welcomeBuffer, name: 'welcome.png' };
+        embed.setImage('attachment://welcome.png');
+        
+        const logChannel = await client.channels.fetch(config.logChannelId);
+        if (logChannel) await logChannel.send({ embeds: [embed], files: [attachment] });
+    } else {
+        const logChannel = await client.channels.fetch(config.logChannelId);
+        if (logChannel) await logChannel.send({ embeds: [embed] });
+    }
+});
+
+// ===================== ÜYE AYRILMA =====================
+client.on('guildMemberRemove', async (member) => {
+    console.log(`👋 ${member.user.tag} sunucudan ayrıldı!`);
+    
+    const leaveBuffer = await createLeaveCard(member);
+    
+    const embed = new EmbedBuilder()
+        .setColor(0xFF0000)
+        .setTitle('👋 **Üye Ayrıldı** 👋')
+        .setDescription(`${member.user.tag} sunucumuzdan ayrıldı!\n😢 Güle güle!`)
+        .addFields(
+            { name: '👤 Kullanıcı', value: `${member.user.tag} (${member.user.id})`, inline: true },
+            { name: '📅 Katılma Tarihi', value: member.joinedAt ? `<t:${Math.floor(member.joinedAt / 1000)}:R>` : 'Bilinmiyor', inline: true }
+        )
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 512 }))
+        .setImage(GIFS.error)
+        .setTimestamp();
+
+    if (leaveBuffer) {
+        const attachment = { attachment: leaveBuffer, name: 'leave.png' };
+        embed.setImage('attachment://leave.png');
+        
+        const logChannel = await client.channels.fetch(config.logChannelId);
+        if (logChannel) await logChannel.send({ embeds: [embed], files: [attachment] });
+    } else {
+        const logChannel = await client.channels.fetch(config.logChannelId);
+        if (logChannel) await logChannel.send({ embeds: [embed] });
+    }
+});
+
+// ===================== DİĞER EVENTLER =====================
+client.on('messageDelete', async (message) => {
+    if (!message.author) return;
+    if (message.author.bot) return;
+    if (!message.guild) return;
+    if (!message.content) return;
+    if (message.content.length < 2) return;
+    
+    const embed = new EmbedBuilder()
+        .setColor(0xFFA500)
+        .setTitle('✉️ **Mesaj Silindi**')
+        .setDescription(`${message.author.tag} tarafından gönderilen mesaj silindi`)
+        .addFields(
+            { name: '📢 Kanal', value: `${message.channel} (${message.channel.id})`, inline: true },
+            { name: '👤 Yazar', value: message.author.tag, inline: true },
+            { name: '📝 Silinen Mesaj', value: `\`\`\`${message.content.substring(0, 500)}\`\`\``, inline: false }
+        )
+        .setThumbnail(message.author.displayAvatarURL())
+        .setImage(GIFS.warn)
+        .setTimestamp();
+
+    await sendLog(message.guild, embed).catch(() => {});
+});
+
+client.on('messageUpdate', async (oldMessage, newMessage) => {
+    if (oldMessage.author?.bot) return;
+    if (!oldMessage.guild) return;
+    if (oldMessage.content === newMessage.content) return;
+    if (!oldMessage.content || !newMessage.content) return;
+    if (oldMessage.content.length < 2 && newMessage.content.length < 2) return;
+    
+    const embed = new EmbedBuilder()
+        .setColor(0xFFA500)
+        .setTitle('✏️ **Mesaj Düzenlendi**')
+        .setDescription(`${oldMessage.author?.tag || 'Bilinmeyen Kullanıcı'} mesajını düzenledi`)
+        .addFields(
+            { name: '📢 Kanal', value: `${oldMessage.channel} (${oldMessage.channel.id})`, inline: true },
+            { name: '👤 Yazar', value: oldMessage.author?.tag || 'Bilinmiyor', inline: true },
+            { name: '📝 Eski Mesaj', value: `\`\`\`${oldMessage.content.substring(0, 500)}\`\`\``, inline: false },
+            { name: '📝 Yeni Mesaj', value: `\`\`\`${newMessage.content.substring(0, 500)}\`\`\``, inline: false }
+        )
+        .setThumbnail(oldMessage.author?.displayAvatarURL() || null)
+        .setImage(GIFS.warn)
+        .setTimestamp();
+
+    await sendLog(oldMessage.guild, embed).catch(() => {});
+});
+
+client.on('messageDeleteBulk', async (messages) => {
+    const firstMessage = messages.first();
+    if (!firstMessage?.guild) return;
+    
+    const embed = new EmbedBuilder()
+        .setColor(0xFFA500)
+        .setTitle('🧹 **Toplu Mesaj Silindi**')
+        .setDescription(`**${messages.size}** mesaj toplu olarak silindi!`)
+        .addFields(
+            { name: '📢 Kanal', value: `${firstMessage.channel} (${firstMessage.channel.id})`, inline: true }
+        )
+        .setImage(GIFS.warn)
+        .setTimestamp();
+
+    await sendLog(firstMessage.guild, embed).catch(() => {});
 });
 
 // ===================== SLASH KOMUT İŞLEMLERİ =====================
@@ -328,8 +516,8 @@ client.on('interactionCreate', async (interaction) => {
 \`\`\`
             `)
             .addFields(
-                { name: '👑 BOSS Rolü', value: '<@&1435010471391657984>', inline: true },
-                { name: '👥 OG Rolü', value: '<@&1435017895947145298>', inline: true },
+                { name: '👑 BOSS Rolü', value: `<@&${config.bossRoles[0]}>`, inline: true },
+                { name: '👥 OG Rolü', value: `<@&${config.ogRoles[0]}>`, inline: true },
                 { name: '📌 Not', value: 'Her iki rol de **eşit yetkiye** sahiptir!', inline: false }
             )
             .setThumbnail(guild.iconURL())
@@ -1012,136 +1200,6 @@ client.on('interactionCreate', async (interaction) => {
         
         await sendLog(guild, embed);
     }
-});
-
-// ===================== ÜYE GİRİŞ =====================
-client.on('guildMemberAdd', async (member) => {
-    console.log(`👋 ${member.user.tag} sunucuya katıldı!`);
-    
-    // Tag sistemi
-    await checkAndAddTag(member);
-    
-    // Otorol
-    if (otorol[member.guild.id]) {
-        try {
-            const role = await member.guild.roles.fetch(otorol[member.guild.id]);
-            if (role) {
-                await member.roles.add(role);
-                console.log(`✅ Otorol verildi: ${member.user.tag} -> ${role.name}`);
-            }
-        } catch (error) {
-            console.error('Otorol hatası:', error);
-        }
-    }
-    
-    // Canvas hoşgeldin kartı
-    try {
-        const welcomeBuffer = await createWelcomeCard(member);
-        const attachment = { attachment: welcomeBuffer, name: 'welcome.png' };
-        
-        const embed = new EmbedBuilder()
-            .setColor(0x00FF00)
-            .setTitle('✨ **Yeni Üye Katıldı** ✨')
-            .setDescription(`${member.user.tag} aramıza katıldı!`)
-            .setImage('attachment://welcome.png')
-            .setTimestamp();
-        
-        const logChannel = await client.channels.fetch(config.logChannelId);
-        if (logChannel) await logChannel.send({ embeds: [embed], files: [attachment] });
-    } catch (error) {
-        console.error('Canvas hatası:', error);
-    }
-});
-
-// ===================== ÜYE AYRILMA =====================
-client.on('guildMemberRemove', async (member) => {
-    console.log(`👋 ${member.user.tag} sunucudan ayrıldı!`);
-    
-    try {
-        const leaveBuffer = await createLeaveCard(member);
-        const attachment = { attachment: leaveBuffer, name: 'leave.png' };
-        
-        const embed = new EmbedBuilder()
-            .setColor(0xFF0000)
-            .setTitle('👋 **Üye Ayrıldı** 👋')
-            .setDescription(`${member.user.tag} sunucumuzdan ayrıldı!`)
-            .setImage('attachment://leave.png')
-            .setTimestamp();
-        
-        const logChannel = await client.channels.fetch(config.logChannelId);
-        if (logChannel) await logChannel.send({ embeds: [embed], files: [attachment] });
-    } catch (error) {
-        console.error('Canvas hatası:', error);
-    }
-});
-
-// ===================== MESAJ SİLME LOG =====================
-client.on('messageDelete', async (message) => {
-    if (!message.author) return;
-    if (message.author.bot) return;
-    if (!message.guild) return;
-    if (!message.content) return;
-    if (message.content.length < 2) return;
-    
-    const embed = new EmbedBuilder()
-        .setColor(0xFFA500)
-        .setTitle('✉️ **Mesaj Silindi**')
-        .setDescription(`${message.author.tag} tarafından gönderilen mesaj silindi`)
-        .addFields(
-            { name: '📢 Kanal', value: `${message.channel} (${message.channel.id})`, inline: true },
-            { name: '👤 Yazar', value: message.author.tag, inline: true },
-            { name: '📝 Silinen Mesaj', value: `\`\`\`${message.content.substring(0, 500)}\`\`\``, inline: false }
-        )
-        .setThumbnail(message.author.displayAvatarURL())
-        .setImage(GIFS.warn)
-        .setFooter({ text: `Mesaj ID: ${message.id} • Silinme: ${new Date().toLocaleString('tr-TR')}` })
-        .setTimestamp();
-
-    await sendLog(message.guild, embed).catch(() => {});
-});
-
-// ===================== MESAJ DÜZENLEME LOG =====================
-client.on('messageUpdate', async (oldMessage, newMessage) => {
-    if (oldMessage.author?.bot) return;
-    if (!oldMessage.guild) return;
-    if (oldMessage.content === newMessage.content) return;
-    if (!oldMessage.content || !newMessage.content) return;
-    if (oldMessage.content.length < 2 && newMessage.content.length < 2) return;
-    
-    const embed = new EmbedBuilder()
-        .setColor(0xFFA500)
-        .setTitle('✏️ **Mesaj Düzenlendi**')
-        .setDescription(`${oldMessage.author?.tag || 'Bilinmeyen Kullanıcı'} mesajını düzenledi`)
-        .addFields(
-            { name: '📢 Kanal', value: `${oldMessage.channel} (${oldMessage.channel.id})`, inline: true },
-            { name: '👤 Yazar', value: oldMessage.author?.tag || 'Bilinmiyor', inline: true },
-            { name: '📝 Eski Mesaj', value: `\`\`\`${oldMessage.content.substring(0, 500)}\`\`\``, inline: false },
-            { name: '📝 Yeni Mesaj', value: `\`\`\`${newMessage.content.substring(0, 500)}\`\`\``, inline: false }
-        )
-        .setThumbnail(oldMessage.author?.displayAvatarURL() || null)
-        .setImage(GIFS.warn)
-        .setFooter({ text: `Mesaj ID: ${oldMessage.id} • Düzenlenme: ${new Date().toLocaleString('tr-TR')}` })
-        .setTimestamp();
-
-    await sendLog(oldMessage.guild, embed).catch(() => {});
-});
-
-// ===================== TOPLU MESAJ SİLME LOG =====================
-client.on('messageDeleteBulk', async (messages) => {
-    const firstMessage = messages.first();
-    if (!firstMessage?.guild) return;
-    
-    const embed = new EmbedBuilder()
-        .setColor(0xFFA500)
-        .setTitle('🧹 **Toplu Mesaj Silindi**')
-        .setDescription(`**${messages.size}** mesaj toplu olarak silindi!`)
-        .addFields(
-            { name: '📢 Kanal', value: `${firstMessage.channel} (${firstMessage.channel.id})`, inline: true }
-        )
-        .setImage(GIFS.warn)
-        .setTimestamp();
-
-    await sendLog(firstMessage.guild, embed).catch(() => {});
 });
 
 // ===================== BUTON İŞLEMLERİ =====================
