@@ -5,7 +5,6 @@ const { createCanvas, loadImage, registerFont } = canvas;
 
 // Configuration - Railway Variables'dan oku
 const config = {
-    token: process.env.token || "MTQ4NDM1MTgxNzcxMzE4OTAyNA.GNR-84.P2zHhGfZlvzczR8NYpivgEStJMKVKHE_srsg64",
     ownerId: process.env.ownerId || "685921707667619908",
     logChannelId: process.env.logChannelId || "1484352505620987964",
     bossRoles: process.env.bossRoles ? process.env.bossRoles.split(',') : ["1435010471391657984"],
