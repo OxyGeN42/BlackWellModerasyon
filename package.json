@@ -1,12 +1,12 @@
 {
   "name": "blackwell-mod-bot",
   "version": "1.0.0",
-  "description": "BlackWell Moderasyon Botu",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.25.1"
+    "discord.js": "^14.14.1",
+    "canvas": "^2.11.2"
   }
 }
