@@ -30,3 +30,14 @@ config.json
 .env
 .DS_Store
 Thumbs.db
+
+node_modules/
+config.json
+warnings.json
+otorol.json
+modlog.json
+duyurulog.json
+tag.json
+.env
+.DS_Store
+Thumbs.db
