@@ -113,7 +113,7 @@ async function sendLog(guild, embed) {
     }
 }
 
-// ===================== CANVAS HOŞGELDİN KARTI (DÜZELTİLDİ) =====================
+// ===================== CANVAS HOŞGELDİN KARTI =====================
 async function createWelcomeCard(member) {
     if (!canvas) return null;
     
@@ -124,19 +124,16 @@ async function createWelcomeCard(member) {
         const canvasObj = createCanvas(width, height);
         const ctx = canvasObj.getContext('2d');
 
-        // Arkaplan gradient
         const gradient = ctx.createLinearGradient(0, 0, width, height);
         gradient.addColorStop(0, '#1a1a2e');
         gradient.addColorStop(1, '#16213e');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
 
-        // Çerçeve
         ctx.strokeStyle = '#e94560';
         ctx.lineWidth = 8;
         ctx.strokeRect(20, 20, width - 40, height - 40);
 
-        // Avatar
         try {
             const avatarUrl = member.user.displayAvatarURL({ extension: 'png', size: 256 });
             const avatar = await loadImage(avatarUrl);
@@ -157,7 +154,6 @@ async function createWelcomeCard(member) {
             console.error('Avatar yüklenemedi:', err);
         }
 
-        // Yazılar
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 36px "Segoe UI"';
         ctx.textAlign = 'center';
@@ -245,14 +241,13 @@ async function createLeaveCard(member) {
     }
 }
 
-// ===================== TAG SİSTEMİ (DÜZELTİLDİ) =====================
+// ===================== TAG SİSTEMİ =====================
 async function checkAndAddTag(member) {
     if (!tagSistemi[member.guild.id]) return;
     
     const tag = tagSistemi[member.guild.id];
     const currentName = member.nickname || member.user.username;
     
-    // Tag zaten varsa ekleme
     if (currentName.startsWith(tag)) return;
     
     try {
@@ -260,7 +255,6 @@ async function checkAndAddTag(member) {
         await member.setNickname(newName);
         console.log(`✅ Tag eklendi: ${member.user.tag} -> ${newName}`);
         
-        // Log gönder
         const embed = new EmbedBuilder()
             .setColor(0x00FF00)
             .setTitle('🏷️ Tag Sistemi')
@@ -333,15 +327,14 @@ client.once('ready', async () => {
         i++;
     }, 10000);
 });
-
-// ===================== ÜYE GİRİŞ - DÜZELTİLDİ =====================
+// ===================== ÜYE GİRİŞ - DÜZELTİLDİ (Önce TAG, sonra OTOROL) =====================
 client.on('guildMemberAdd', async (member) => {
     console.log(`👋 ${member.user.tag} sunucuya katıldı!`);
     
-    // Tag sistemi
+    // 1. ÖNCE TAG EKLE (isim değişikliği)
     await checkAndAddTag(member);
     
-    // Otorol
+    // 2. SONRA OTOROL VER (rol verme)
     if (otorol[member.guild.id]) {
         try {
             const role = await member.guild.roles.fetch(otorol[member.guild.id]);
@@ -354,7 +347,7 @@ client.on('guildMemberAdd', async (member) => {
         }
     }
     
-    // Canvas hoşgeldin kartı
+    // 3. Canvas hoşgeldin kartı (opsiyonel)
     const welcomeBuffer = await createWelcomeCard(member);
     
     const embed = new EmbedBuilder()
@@ -364,7 +357,9 @@ client.on('guildMemberAdd', async (member) => {
         .addFields(
             { name: '👤 Kullanıcı', value: `${member.user.tag} (${member.user.id})`, inline: true },
             { name: '📅 Hesap Oluşturma', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
-            { name: '📊 Üye Sırası', value: `**${member.guild.memberCount}**. üye`, inline: true }
+            { name: '📊 Üye Sırası', value: `**${member.guild.memberCount}**. üye`, inline: true },
+            { name: '🏷️ Tag', value: tagSistemi[member.guild.id] ? `\`${tagSistemi[member.guild.id]}\` eklendi` : 'Ayarlanmamış', inline: true },
+            { name: '🎭 Otorol', value: otorol[member.guild.id] ? `<@&${otorol[member.guild.id]}> verildi` : 'Ayarlanmamış', inline: true }
         )
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 512 }))
         .setImage(GIFS.welcome)
@@ -412,7 +407,7 @@ client.on('guildMemberRemove', async (member) => {
     }
 });
 
-// ===================== DİĞER EVENTLER =====================
+// ===================== MESAJ SİLME LOG =====================
 client.on('messageDelete', async (message) => {
     if (!message.author) return;
     if (message.author.bot) return;
@@ -958,58 +953,25 @@ client.on('interactionCreate', async (interaction) => {
 
         const row1 = new ActionRowBuilder()
             .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('ban_menu')
-                    .setLabel('🔨 Ban')
-                    .setStyle(ButtonStyle.Danger),
-                new ButtonBuilder()
-                    .setCustomId('kick_menu')
-                    .setLabel('👢 Kick')
-                    .setStyle(ButtonStyle.Danger),
-                new ButtonBuilder()
-                    .setCustomId('mute_menu')
-                    .setLabel('🔇 Mute')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('warn_menu')
-                    .setLabel('⚠️ Uyarı')
-                    .setStyle(ButtonStyle.Secondary)
+                new ButtonBuilder().setCustomId('ban_menu').setLabel('🔨 Ban').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId('kick_menu').setLabel('👢 Kick').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId('mute_menu').setLabel('🔇 Mute').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('warn_menu').setLabel('⚠️ Uyarı').setStyle(ButtonStyle.Secondary)
             );
 
         const row2 = new ActionRowBuilder()
             .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('ban_list')
-                    .setLabel('📋 Ban Listesi')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('clear_menu')
-                    .setLabel('🧹 Mesaj Temizle')
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('mod_logs')
-                    .setLabel('📜 Moderasyon Logları')
-                    .setStyle(ButtonStyle.Success),
-                new ButtonBuilder()
-                    .setCustomId('duyuru_menu')
-                    .setLabel('📢 Duyuru')
-                    .setStyle(ButtonStyle.Primary)
+                new ButtonBuilder().setCustomId('ban_list').setLabel('📋 Ban Listesi').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('clear_menu').setLabel('🧹 Mesaj Temizle').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('mod_logs').setLabel('📜 Moderasyon Logları').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId('duyuru_menu').setLabel('📢 Duyuru').setStyle(ButtonStyle.Primary)
             );
 
         const row3 = new ActionRowBuilder()
             .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('otorol_menu')
-                    .setLabel('⚙️ Otorol')
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('tag_menu')
-                    .setLabel('🏷️ Tag Sistemi')
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('istatistik')
-                    .setLabel('📊 İstatistik')
-                    .setStyle(ButtonStyle.Success)
+                new ButtonBuilder().setCustomId('otorol_menu').setLabel('⚙️ Otorol').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('tag_menu').setLabel('🏷️ Tag Sistemi').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('istatistik').setLabel('📊 İstatistik').setStyle(ButtonStyle.Success)
             );
 
         await interaction.reply({ embeds: [panelEmbed], components: [row1, row2, row3] });
@@ -1201,15 +1163,14 @@ client.on('interactionCreate', async (interaction) => {
         await sendLog(guild, embed);
     }
 });
-
 // ===================== BUTON İŞLEMLERİ =====================
 client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
     if (!isStaff(interaction.member)) {
         return interaction.reply({ content: '❌ Bu işlem için yetkiniz yok!', flags: MessageFlags.Ephemeral });
     }
 
-    // BAN LİSTESİ
+    // ===== BAN LİSTESİ =====
     if (interaction.customId === 'ban_list') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
@@ -1248,26 +1209,12 @@ client.on('interactionCreate', async (interaction) => {
                 .setTimestamp();
 
             await interaction.editReply({ embeds: [embed] });
-
-            const logEmbed = new EmbedBuilder()
-                .setColor(0x00FF00)
-                .setTitle('📋 Ban Listesi Görüntülendi')
-                .setDescription(`**${interaction.user.tag}** ban listesini görüntüledi`)
-                .addFields(
-                    { name: '👤 Yetkili', value: `${interaction.user.tag} (${interaction.user.id})`, inline: true },
-                    { name: '📊 Ban Sayısı', value: bans.size.toString(), inline: true }
-                )
-                .setThumbnail(interaction.user.displayAvatarURL())
-                .setTimestamp();
-            
-            await sendLog(interaction.guild, logEmbed);
-
         } catch (error) {
             await interaction.editReply({ content: '❌ Ban listesi alınırken hata oluştu!' });
         }
     }
     
-    // BAN MENÜSÜ
+    // ===== BAN MENÜSÜ =====
     if (interaction.customId === 'ban_menu') {
         await interaction.guild.members.fetch();
         
@@ -1301,7 +1248,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // BAN SEÇİMİ
+    // ===== BAN SEÇİMİ =====
     if (interaction.isStringSelectMenu() && interaction.customId === 'ban_select') {
         const userId = interaction.values[0];
         const user = await client.users.fetch(userId);
@@ -1370,7 +1317,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // KICK MENÜSÜ
+    // ===== KICK MENÜSÜ =====
     if (interaction.customId === 'kick_menu') {
         await interaction.guild.members.fetch();
         
@@ -1404,7 +1351,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // KICK SEÇİMİ
+    // ===== KICK SEÇİMİ =====
     if (interaction.isStringSelectMenu() && interaction.customId === 'kick_select') {
         const userId = interaction.values[0];
         const user = await client.users.fetch(userId);
@@ -1473,7 +1420,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // MUTE MENÜSÜ
+    // ===== MUTE MENÜSÜ =====
     if (interaction.customId === 'mute_menu') {
         await interaction.guild.members.fetch();
         
@@ -1507,7 +1454,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // MUTE SEÇİMİ
+    // ===== MUTE SEÇİMİ =====
     if (interaction.isStringSelectMenu() && interaction.customId === 'mute_select') {
         const userId = interaction.values[0];
         const user = await client.users.fetch(userId);
@@ -1589,7 +1536,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // UYARI MENÜSÜ
+    // ===== UYARI MENÜSÜ =====
     if (interaction.customId === 'warn_menu') {
         await interaction.guild.members.fetch();
         
@@ -1623,7 +1570,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // UYARI SEÇİMİ
+    // ===== UYARI SEÇİMİ =====
     if (interaction.isStringSelectMenu() && interaction.customId === 'warn_select') {
         const userId = interaction.values[0];
         const user = await client.users.fetch(userId);
@@ -1721,7 +1668,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // MESAJ TEMİZLE
+    // ===== MESAJ TEMİZLE =====
     if (interaction.customId === 'clear_menu') {
         await interaction.reply({
             content: '🧹 **Kaç mesaj silinecek?** (1-100 arası bir sayı yazın)',
@@ -1774,7 +1721,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // MODERASYON LOGLARI
+    // ===== MODERASYON LOGLARI =====
     if (interaction.customId === 'mod_logs') {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
@@ -1815,7 +1762,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply({ embeds: [embed] });
     }
 
-    // DUYURU MENÜSÜ
+    // ===== DUYURU MENÜSÜ =====
     if (interaction.customId === 'duyuru_menu') {
         await interaction.reply({
             content: '📢 **Duyuru mesajını yazın:**\nNot: DM\'si kapalı olanlara mesaj gitmez.',
@@ -1935,7 +1882,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // İSTATİSTİK
+    // ===== İSTATİSTİK =====
     if (interaction.customId === 'istatistik') {
         await interaction.guild.members.fetch();
         
@@ -1969,25 +1916,13 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
-    // OTOROL MENÜSÜ
+    // ===== OTOROL MENÜSÜ =====
     if (interaction.customId === 'otorol_menu') {
         const row = new ActionRowBuilder()
             .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('otorol_ayarla')
-                    .setLabel('⚙️ Otorol AYARLA')
-                    .setStyle(ButtonStyle.Success)
-                    .setEmoji('⚙️'),
-                new ButtonBuilder()
-                    .setCustomId('otorol_kapat')
-                    .setLabel('🔴 Otorol KAPAT')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('🔴'),
-                new ButtonBuilder()
-                    .setCustomId('otorol_sorgula')
-                    .setLabel('🔍 Otorol SORGULA')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🔍')
+                new ButtonBuilder().setCustomId('otorol_ayarla').setLabel('⚙️ Otorol AYARLA').setStyle(ButtonStyle.Success).setEmoji('⚙️'),
+                new ButtonBuilder().setCustomId('otorol_kapat').setLabel('🔴 Otorol KAPAT').setStyle(ButtonStyle.Danger).setEmoji('🔴'),
+                new ButtonBuilder().setCustomId('otorol_sorgula').setLabel('🔍 Otorol SORGULA').setStyle(ButtonStyle.Primary).setEmoji('🔍')
             );
 
         await interaction.reply({
@@ -1997,7 +1932,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // OTOROL AYARLA
+    // ===== OTOROL AYARLA =====
     if (interaction.customId === 'otorol_ayarla') {
         await interaction.reply({
             content: '📝 **Otorol olarak ayarlanacak rolü etiketleyin:**',
@@ -2049,7 +1984,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // OTOROL KAPAT
+    // ===== OTOROL KAPAT =====
     if (interaction.customId === 'otorol_kapat') {
         if (!otorol[interaction.guild.id]) {
             return interaction.reply({ 
@@ -2077,7 +2012,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
-    // OTOROL SORGULA
+    // ===== OTOROL SORGULA =====
     if (interaction.customId === 'otorol_sorgula') {
         if (!otorol[interaction.guild.id]) {
             return interaction.reply({ 
@@ -2106,25 +2041,13 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
-    // TAG MENÜSÜ
+    // ===== TAG MENÜSÜ =====
     if (interaction.customId === 'tag_menu') {
         const row = new ActionRowBuilder()
             .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('tag_ayarla')
-                    .setLabel('🏷️ Tag AYARLA')
-                    .setStyle(ButtonStyle.Success)
-                    .setEmoji('🏷️'),
-                new ButtonBuilder()
-                    .setCustomId('tag_kapat')
-                    .setLabel('🔴 Tag KAPAT')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('🔴'),
-                new ButtonBuilder()
-                    .setCustomId('tag_sorgula')
-                    .setLabel('🔍 Tag SORGULA')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🔍')
+                new ButtonBuilder().setCustomId('tag_ayarla').setLabel('🏷️ Tag AYARLA').setStyle(ButtonStyle.Success).setEmoji('🏷️'),
+                new ButtonBuilder().setCustomId('tag_kapat').setLabel('🔴 Tag KAPAT').setStyle(ButtonStyle.Danger).setEmoji('🔴'),
+                new ButtonBuilder().setCustomId('tag_sorgula').setLabel('🔍 Tag SORGULA').setStyle(ButtonStyle.Primary).setEmoji('🔍')
             );
 
         await interaction.reply({
@@ -2134,7 +2057,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // TAG AYARLA
+    // ===== TAG AYARLA =====
     if (interaction.customId === 'tag_ayarla') {
         await interaction.reply({
             content: '📝 **Tag olarak ayarlanacak metni yazın (örn: BLW |):**',
@@ -2176,7 +2099,7 @@ client.on('interactionCreate', async (interaction) => {
         });
     }
 
-    // TAG KAPAT
+    // ===== TAG KAPAT =====
     if (interaction.customId === 'tag_kapat') {
         if (!tagSistemi[interaction.guild.id]) {
             return interaction.reply({ 
@@ -2202,7 +2125,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
-    // TAG SORGULA
+    // ===== TAG SORGULA =====
     if (interaction.customId === 'tag_sorgula') {
         if (!tagSistemi[interaction.guild.id]) {
             return interaction.reply({ 
@@ -2223,6 +2146,810 @@ client.on('interactionCreate', async (interaction) => {
             .setTimestamp();
 
         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    }
+});
+
+// ===================== KOMUTLAR (! prefix) =====================
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    if (!message.content.startsWith('!')) return;
+    
+    const args = message.content.slice(1).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+    
+    if (!isStaff(message.member) && command !== 'yardım' && command !== 'help') {
+        return message.reply({ 
+            content: '❌ Bu komutu kullanmak için yetkiniz yok!', 
+            flags: MessageFlags.Ephemeral 
+        });
+    }
+
+    // ===== YARDIM =====
+    if (command === 'yardım' || command === 'help') {
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('📚 **BlackWell Moderasyon Komutları**')
+            .setDescription(`
+\`\`\`ascii
+╔════════════════════════════════════════════════════╗
+║              🛡️ MODERASYON KOMUTLARI                ║
+╠════════════════════════════════════════════════════╣
+║ !panel      - Moderasyon panelini açar             ║
+║ !ban        - Kullanıcı banlar                     ║
+║ !kick       - Kullanıcı atar                       ║
+║ !mute       - Kullanıcı susturur                   ║
+║ !unmute     - Susturmayı kaldırır                  ║
+║ !warn       - Uyarı verir                          ║
+║ !warnings   - Uyarıları gösterir                   ║
+║ !warnsil    - Belirli uyarıyı siler                ║
+║ !warntemizle- Tüm uyarıları temizler               ║
+║ !clear      - Mesaj temizler                       ║
+║ !banlist    - Ban listesini açar                   ║
+║ !duyuru     - Duyuru gönderir                      ║
+║ !dm         - Özel mesaj gönderir                  ║
+║ !otorol     - Otorol ayarlar                       ║
+║ !otorolkontrol - Otorol kontrol                    ║
+║ !tag-ayarla - Tag sistemi ayarlar                  ║
+║ !tag-kapat  - Tag sistemini kapatır                ║
+║ !istatistik - Sunucu istatistiği                   ║
+╚════════════════════════════════════════════════════╝
+\`\`\`
+            `)
+            .addFields(
+                { name: '👑 BOSS Rolü', value: `<@&${config.bossRoles[0]}>`, inline: true },
+                { name: '👥 OG Rolü', value: `<@&${config.ogRoles[0]}>`, inline: true },
+                { name: '📌 Not', value: 'Her iki rol de **eşit yetkiye** sahiptir!', inline: false }
+            )
+            .setThumbnail(message.guild.iconURL())
+            .setImage(GIFS.welcome)
+            .setFooter({ text: `BlackWell Moderasyon • ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
+    }
+    
+    // ===== UYARI SİLME =====
+    if (command === 'warnsil' || command === 'warnremove') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply({ content: '❌ Bir kullanıcı etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        const warnNumber = parseInt(args[1]);
+        if (isNaN(warnNumber) || warnNumber < 1) {
+            return message.reply({ content: '❌ Geçerli bir uyarı numarası belirtmelisiniz!', flags: MessageFlags.Ephemeral });
+        }
+        
+        if (!warnings[user.id] || warnings[user.id].length === 0) {
+            return message.reply({ content: `❌ ${user.tag} kullanıcısının hiç uyarısı yok!`, flags: MessageFlags.Ephemeral });
+        }
+        
+        if (warnNumber > warnings[user.id].length) {
+            return message.reply({ content: `❌ Bu kullanıcının sadece ${warnings[user.id].length} uyarısı var!`, flags: MessageFlags.Ephemeral });
+        }
+        
+        const silinenUyari = warnings[user.id][warnNumber - 1];
+        
+        warnings[user.id].splice(warnNumber - 1, 1);
+        
+        if (warnings[user.id].length === 0) {
+            delete warnings[user.id];
+        }
+        
+        fs.writeFileSync('./warnings.json', JSON.stringify(warnings, null, 2));
+        
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('✅ **Uyarı Silindi**')
+            .setDescription(`${user.tag} kullanıcısının ${warnNumber}. uyarısı silindi!`)
+            .addFields(
+                { name: '👤 Kullanıcı', value: `${user.tag} (${user.id})`, inline: true },
+                { name: '👮 İşlemi Yapan', value: message.author.tag, inline: true },
+                { name: '📝 Silinen Uyarı', value: `\`\`\`${silinenUyari.reason}\`\`\``, inline: false },
+                { name: '👤 Uyaran', value: silinenUyari.mod, inline: true },
+                { name: '🕐 Uyarı Tarihi', value: new Date(silinenUyari.date).toLocaleString('tr-TR'), inline: true },
+                { name: '📊 Kalan Uyarı', value: warnings[user.id] ? warnings[user.id].length.toString() : '0', inline: true }
+            )
+            .setThumbnail(user.displayAvatarURL())
+            .setImage(GIFS.success)
+            .setFooter({ text: `İşlem ID: ${Date.now()}`, iconURL: message.guild.iconURL() })
+            .setTimestamp();
+        
+        await sendLog(message.guild, embed);
+        await message.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+        
+        try {
+            const dmEmbed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('✅ **Uyarınız Silindi**')
+                .setDescription(`**${message.guild.name}** sunucusunda bir uyarınız silindi!`)
+                .addFields(
+                    { name: '📝 Silinen Uyarı', value: `\`\`\`${silinenUyari.reason}\`\`\``, inline: false },
+                    { name: '👮 İşlemi Yapan', value: message.author.tag, inline: true },
+                    { name: '📊 Kalan Uyarı', value: warnings[user.id] ? warnings[user.id].length.toString() : '0', inline: true }
+                )
+                .setThumbnail(message.guild.iconURL())
+                .setImage(GIFS.success)
+                .setTimestamp();
+            
+            await user.send({ embeds: [dmEmbed] }).catch(() => {});
+        } catch (e) {}
+        
+        modLog.push({
+            type: 'UYARI SİLME',
+            user: user.tag,
+            userId: user.id,
+            mod: message.author.tag,
+            modId: message.author.id,
+            reason: `${warnNumber}. uyarı silindi (Sebep: ${silinenUyari.reason})`,
+            date: new Date().toISOString()
+        });
+        fs.writeFileSync('./modlog.json', JSON.stringify(modLog, null, 2));
+    }
+    
+    // ===== TÜM UYARILARI TEMİZLE =====
+    if (command === 'warntemizle' || command === 'warnclear') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply({ content: '❌ Bir kullanıcı etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        if (!warnings[user.id] || warnings[user.id].length === 0) {
+            return message.reply({ content: `✅ ${user.tag} kullanıcısının zaten hiç uyarısı yok!`, flags: MessageFlags.Ephemeral });
+        }
+        
+        const uyariSayisi = warnings[user.id].length;
+        
+        delete warnings[user.id];
+        fs.writeFileSync('./warnings.json', JSON.stringify(warnings, null, 2));
+        
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('🧹 **Tüm Uyarılar Temizlendi**')
+            .setDescription(`${user.tag} kullanıcısının **${uyariSayisi}** uyarısı temizlendi!`)
+            .addFields(
+                { name: '👤 Kullanıcı', value: `${user.tag} (${user.id})`, inline: true },
+                { name: '👮 İşlemi Yapan', value: message.author.tag, inline: true },
+                { name: '📊 Temizlenen Uyarı', value: `**${uyariSayisi}** uyarı`, inline: true }
+            )
+            .setThumbnail(user.displayAvatarURL())
+            .setImage(GIFS.success)
+            .setFooter({ text: `İşlem ID: ${Date.now()}`, iconURL: message.guild.iconURL() })
+            .setTimestamp();
+        
+        await sendLog(message.guild, embed);
+        await message.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+        
+        try {
+            const dmEmbed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('🧹 **Tüm Uyarılarınız Temizlendi**')
+                .setDescription(`**${message.guild.name}** sunucusunda **${uyariSayisi}** uyarınız temizlendi!`)
+                .addFields(
+                    { name: '👮 İşlemi Yapan', value: message.author.tag, inline: true },
+                    { name: '📊 Temizlenen Uyarı', value: `**${uyariSayisi}** uyarı`, inline: true }
+                )
+                .setThumbnail(message.guild.iconURL())
+                .setImage(GIFS.success)
+                .setTimestamp();
+            
+            await user.send({ embeds: [dmEmbed] }).catch(() => {});
+        } catch (e) {}
+        
+        modLog.push({
+            type: 'UYARI TEMİZLEME',
+            user: user.tag,
+            userId: user.id,
+            mod: message.author.tag,
+            modId: message.author.id,
+            reason: `${uyariSayisi} uyarı temizlendi`,
+            date: new Date().toISOString()
+        });
+        fs.writeFileSync('./modlog.json', JSON.stringify(modLog, null, 2));
+    }
+    
+    // ===== DM KOMUTU =====
+    if (command === 'dm') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply({ content: '❌ Bir kullanıcı etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        const dmMesaj = args.slice(1).join(' ');
+        if (!dmMesaj) return message.reply({ content: '❌ Bir mesaj yazmalısınız!', flags: MessageFlags.Ephemeral });
+        
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('📨 Özel Mesaj')
+                .setDescription(dmMesaj)
+                .addFields(
+                    { name: '👤 Gönderen', value: message.author.tag, inline: true },
+                    { name: '🏠 Sunucu', value: message.guild.name, inline: true }
+                )
+                .setThumbnail(message.guild.iconURL())
+                .setImage(GIFS.success)
+                .setTimestamp();
+
+            await user.send({ embeds: [embed] });
+            await message.reply({ content: `✅ ${user.tag} adlı kullanıcıya mesaj gönderildi!`, flags: MessageFlags.Ephemeral });
+
+        } catch (error) {
+            await message.reply({ content: `❌ ${user.tag} adlı kullanıcıya mesaj gönderilemedi! (DM'si kapalı)`, flags: MessageFlags.Ephemeral });
+        }
+    }
+    
+    // ===== OTOROL KONTROL =====
+    if (command === 'otorolkontrol') {
+        if (!otorol[message.guild.id]) {
+            return message.reply({ content: '❌ Bu sunucuda otorol ayarlı değil!', flags: MessageFlags.Ephemeral });
+        }
+
+        const role = await message.guild.roles.fetch(otorol[message.guild.id]);
+        const botMember = message.guild.members.cache.get(client.user.id);
+        const canGive = botMember.roles.highest.position > role.position;
+
+        const embed = new EmbedBuilder()
+            .setColor(canGive ? 0x00FF00 : 0xFF0000)
+            .setTitle('🔍 Otorol Kontrol')
+            .addFields(
+                { name: '🎭 Otorol', value: `${role} (${role.id})`, inline: false },
+                { name: '🤖 Bot Rolü', value: `${botMember.roles.highest.name} (Seviye: ${botMember.roles.highest.position})`, inline: true },
+                { name: '🎯 Otorol Seviyesi', value: `Seviye: ${role.position}`, inline: true },
+                { name: '✅ Verilebilir mi?', value: canGive ? '**EVET**' : '**HAYIR** (Bot rolü daha yüksek olmalı!)', inline: false }
+            )
+            .setImage(canGive ? GIFS.success : GIFS.error)
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
+    }
+    
+    // ===== TAG AYARLA (! komutu) =====
+    if (command === 'tag-ayarla') {
+        const tag = args.join(' ');
+        if (!tag) return message.reply({ content: '❌ Bir tag belirtmelisiniz! (örn: BLW |)', flags: MessageFlags.Ephemeral });
+        
+        tagSistemi[message.guild.id] = tag;
+        fs.writeFileSync('./tag.json', JSON.stringify(tagSistemi, null, 2));
+        
+        await message.reply({ content: `✅ Tag sistemi aktif! Yeni girenlere **${tag}** eklenecek.`, flags: MessageFlags.Ephemeral });
+        
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('🏷️ Tag Sistemi Ayarlandı')
+            .addFields(
+                { name: '📝 Tag', value: `\`${tag}\``, inline: true },
+                { name: '👤 Ayarlayan', value: message.author.tag, inline: true }
+            )
+            .setImage(GIFS.success)
+            .setTimestamp();
+        
+        await sendLog(message.guild, embed);
+    }
+    
+    // ===== TAG KAPAT (! komutu) =====
+    if (command === 'tag-kapat') {
+        if (!tagSistemi[message.guild.id]) {
+            return message.reply({ content: '❌ Tag sistemi zaten kapalı!', flags: MessageFlags.Ephemeral });
+        }
+        
+        delete tagSistemi[message.guild.id];
+        fs.writeFileSync('./tag.json', JSON.stringify(tagSistemi, null, 2));
+        
+        await message.reply({ content: '✅ Tag sistemi kapatıldı!', flags: MessageFlags.Ephemeral });
+        
+        const embed = new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle('🏷️ Tag Sistemi Kapatıldı')
+            .addFields(
+                { name: '👤 Kapatan', value: message.author.tag, inline: true }
+            )
+            .setImage(GIFS.error)
+            .setTimestamp();
+        
+        await sendLog(message.guild, embed);
+    }
+    
+    // ===== OTOROL KOMUTU =====
+    if (command === 'otorol') {
+        const role = message.mentions.roles.first();
+        if (!role) return message.reply({ content: '❌ Bir rol etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        const botMember = message.guild.members.cache.get(client.user.id);
+        if (botMember.roles.highest.position <= role.position) {
+            return message.reply({ 
+                content: '❌ Bu rolü veremem! Bot rolü, verilecek rolden **yüksek** olmalı!', 
+                flags: MessageFlags.Ephemeral 
+            });
+        }
+        
+        otorol[message.guild.id] = role.id;
+        fs.writeFileSync('./otorol.json', JSON.stringify(otorol, null, 2));
+        
+        await message.reply({ content: `✅ Otorol ${role} olarak ayarlandı!`, flags: MessageFlags.Ephemeral });
+        
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('⚙️ Otorol Ayarlandı')
+            .addFields(
+                { name: '🎭 Rol', value: role.name, inline: true },
+                { name: '👤 Ayarlayan', value: message.author.tag, inline: true }
+            )
+            .setImage(GIFS.success)
+            .setTimestamp();
+        
+        await sendLog(message.guild, embed);
+    }
+    
+        // ===== BAN KOMUTU =====
+    if (command === 'ban') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply({ content: '❌ Bir kullanıcı etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        const reason = args.slice(1).join(' ') || 'Belirtilmedi';
+        
+        try {
+            const member = await message.guild.members.fetch(user.id);
+            await member.ban({ reason: `${message.author.tag} tarafından: ${reason}` });
+
+            const embed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle('🔨 Kullanıcı Banlandı')
+                .setDescription(`**${user.tag}** sunucudan banlandı!`)
+                .addFields(
+                    { name: '👤 Banlanan', value: `${user.tag} (${user.id})`, inline: true },
+                    { name: '👮 Banlayan', value: message.author.tag, inline: true },
+                    { name: '📝 Sebep', value: reason, inline: false }
+                )
+                .setThumbnail(user.displayAvatarURL())
+                .setImage(GIFS.ban)
+                .setTimestamp();
+
+            await sendLog(message.guild, embed);
+            await message.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+            
+            modLog.push({
+                type: 'BAN',
+                user: user.tag,
+                userId: user.id,
+                mod: message.author.tag,
+                modId: message.author.id,
+                reason: reason,
+                date: new Date().toISOString()
+            });
+            fs.writeFileSync('./modlog.json', JSON.stringify(modLog, null, 2));
+
+        } catch (error) {
+            await message.reply({ content: '❌ Banlama başarısız! Hata: ' + error.message, flags: MessageFlags.Ephemeral });
+        }
+    }
+    
+    // ===== KICK KOMUTU =====
+    if (command === 'kick') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply({ content: '❌ Bir kullanıcı etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        const reason = args.slice(1).join(' ') || 'Belirtilmedi';
+        
+        try {
+            const member = await message.guild.members.fetch(user.id);
+            await member.kick(`${message.author.tag} tarafından: ${reason}`);
+
+            const embed = new EmbedBuilder()
+                .setColor(0xFFA500)
+                .setTitle('👢 Kullanıcı Kicklendi')
+                .setDescription(`**${user.tag}** sunucudan kicklendi!`)
+                .addFields(
+                    { name: '👤 Kicklenen', value: `${user.tag} (${user.id})`, inline: true },
+                    { name: '👮 Kickleyen', value: message.author.tag, inline: true },
+                    { name: '📝 Sebep', value: reason, inline: false }
+                )
+                .setThumbnail(user.displayAvatarURL())
+                .setImage(GIFS.kick)
+                .setTimestamp();
+
+            await sendLog(message.guild, embed);
+            await message.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+            
+            modLog.push({
+                type: 'KICK',
+                user: user.tag,
+                userId: user.id,
+                mod: message.author.tag,
+                modId: message.author.id,
+                reason: reason,
+                date: new Date().toISOString()
+            });
+            fs.writeFileSync('./modlog.json', JSON.stringify(modLog, null, 2));
+
+        } catch (error) {
+            await message.reply({ content: '❌ Kick işlemi başarısız! Hata: ' + error.message, flags: MessageFlags.Ephemeral });
+        }
+    }
+    
+    // ===== MUTE KOMUTU =====
+    if (command === 'mute') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply({ content: '❌ Bir kullanıcı etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        const timeStr = args[0];
+        if (!timeStr) return message.reply({ content: '❌ Süre belirtmelisiniz! (10m, 1h, 1d)', flags: MessageFlags.Ephemeral });
+        
+        const reason = args.slice(1).join(' ') || 'Belirtilmedi';
+        const timeMs = parseTime(timeStr);
+        
+        if (!timeMs) return message.reply({ content: '❌ Geçersiz süre formatı! (10m, 1h, 1d)', flags: MessageFlags.Ephemeral });
+        
+        try {
+            const member = await message.guild.members.fetch(user.id);
+            await member.timeout(timeMs, `${message.author.tag} tarafından: ${reason}`);
+            const bitisZamani = new Date(Date.now() + timeMs);
+
+            const embed = new EmbedBuilder()
+                .setColor(0xFFFF00)
+                .setTitle('🔇 Kullanıcı Mute\'lendi')
+                .setDescription(`**${user.tag}** susturuldu!`)
+                .addFields(
+                    { name: '👤 Mute\'lenen', value: `${user.tag} (${user.id})`, inline: true },
+                    { name: '👮 Mute\'leyen', value: message.author.tag, inline: true },
+                    { name: '⏱️ Süre', value: timeStr, inline: true },
+                    { name: '⏰ Bitiş', value: `<t:${Math.floor(bitisZamani / 1000)}:R>`, inline: true },
+                    { name: '📝 Sebep', value: reason, inline: false }
+                )
+                .setThumbnail(user.displayAvatarURL())
+                .setImage(GIFS.mute)
+                .setTimestamp();
+
+            await sendLog(message.guild, embed);
+            await message.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+            
+            modLog.push({
+                type: 'MUTE',
+                user: user.tag,
+                userId: user.id,
+                mod: message.author.tag,
+                modId: message.author.id,
+                duration: timeStr,
+                reason: reason,
+                date: new Date().toISOString()
+            });
+            fs.writeFileSync('./modlog.json', JSON.stringify(modLog, null, 2));
+
+        } catch (error) {
+            await message.reply({ content: '❌ Mute işlemi başarısız! Hata: ' + error.message, flags: MessageFlags.Ephemeral });
+        }
+    }
+    
+    // ===== UNMUTE KOMUTU =====
+    if (command === 'unmute') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply({ content: '❌ Bir kullanıcı etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        try {
+            const member = await message.guild.members.fetch(user.id);
+            await member.timeout(null);
+
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('🔊 Mute Kaldırıldı')
+                .setDescription(`**${user.tag}** kullanıcısının susturması kaldırıldı!`)
+                .addFields(
+                    { name: '👤 Kullanıcı', value: `${user.tag} (${user.id})`, inline: true },
+                    { name: '👮 İşlemi Yapan', value: message.author.tag, inline: true }
+                )
+                .setThumbnail(user.displayAvatarURL())
+                .setImage(GIFS.success)
+                .setTimestamp();
+
+            await sendLog(message.guild, embed);
+            await message.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+
+        } catch (error) {
+            await message.reply({ content: '❌ Mute kaldırma başarısız!', flags: MessageFlags.Ephemeral });
+        }
+    }
+    
+    // ===== UYARI KOMUTU =====
+    if (command === 'warn') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply({ content: '❌ Bir kullanıcı etiketlemelisiniz!', flags: MessageFlags.Ephemeral });
+        
+        const reason = args.slice(1).join(' ') || 'Belirtilmedi';
+        
+        if (!warnings[user.id]) warnings[user.id] = [];
+        warnings[user.id].push({
+            reason: reason,
+            mod: message.author.tag,
+            modId: message.author.id,
+            date: new Date().toISOString()
+        });
+        
+        fs.writeFileSync('./warnings.json', JSON.stringify(warnings, null, 2));
+        
+        let dmStatus = '✅ Gönderildi';
+        try {
+            const dmEmbed = new EmbedBuilder()
+                .setColor(0xFFA500)
+                .setTitle('⚠️ **Uyarı Aldınız!**')
+                .setDescription(`**${message.guild.name}** sunucusunda uyarı aldınız!`)
+                .addFields(
+                    { name: '📝 Uyarı Sebebi', value: `\`\`\`${reason}\`\`\``, inline: false },
+                    { name: '👮 Uyaran Yetkili', value: message.author.tag, inline: true },
+                    { name: '📊 Toplam Uyarı', value: `**${warnings[user.id].length}**`, inline: true },
+                    { name: '🕐 Uyarı Tarihi', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+                )
+                .setThumbnail(message.guild.iconURL())
+                .setImage(GIFS.warn)
+                .setFooter({ text: 'BlackWell Moderasyon', iconURL: message.guild.iconURL() })
+                .setTimestamp();
+
+            await user.send({ embeds: [dmEmbed] });
+        } catch (error) {
+            dmStatus = '❌ Gönderilemedi (DM kapalı)';
+        }
+        
+        const embed = new EmbedBuilder()
+            .setColor(0xFFA500)
+            .setTitle('⚠️ **Kullanıcı Uyarıldı**')
+            .setDescription(`${user.tag} adlı kullanıcı uyarıldı!`)
+            .addFields(
+                { name: '👤 Uyarılan', value: `${user.tag} (${user.id})`, inline: true },
+                { name: '👮 Uyaran', value: message.author.tag, inline: true },
+                { name: '📝 Sebep', value: reason, inline: false },
+                { name: '📊 Toplam Uyarı', value: warnings[user.id].length.toString(), inline: true },
+                { name: '📨 DM Durumu', value: dmStatus, inline: true }
+            )
+            .setThumbnail(user.displayAvatarURL())
+            .setImage(GIFS.warn)
+            .setFooter({ text: `Uyarı ID: ${Date.now()}`, iconURL: message.guild.iconURL() })
+            .setTimestamp();
+        
+        await sendLog(message.guild, embed);
+        await message.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+        
+        modLog.push({
+            type: 'UYARI',
+            user: user.tag,
+            userId: user.id,
+            mod: message.author.tag,
+            modId: message.author.id,
+            reason: reason,
+            date: new Date().toISOString()
+        });
+        fs.writeFileSync('./modlog.json', JSON.stringify(modLog, null, 2));
+    }
+    
+    // ===== UYARILARI GÖSTER =====
+    if (command === 'warnings') {
+        const user = message.mentions.users.first() || message.author;
+        
+        if (!warnings[user.id] || warnings[user.id].length === 0) {
+            return message.reply({ 
+                embeds: [new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('📋 Uyarı Geçmişi')
+                    .setDescription(`✅ ${user.tag} kullanıcısının hiç uyarısı yok.`)
+                    .setThumbnail(user.displayAvatarURL())
+                    .setImage(GIFS.success)
+                    .setTimestamp()
+                ], 
+                flags: MessageFlags.Ephemeral 
+            });
+        }
+        
+        let warnList = '';
+        warnings[user.id].forEach((w, i) => {
+            const tarih = new Date(w.date).toLocaleString('tr-TR');
+            warnList += `**${i+1}.** 📝 **Sebep:** ${w.reason}\n`;
+            warnList += `   ╰➤ **Uyaran:** ${w.mod}\n`;
+            warnList += `   ╰➤ **Tarih:** ${tarih}\n\n`;
+        });
+        
+        const embed = new EmbedBuilder()
+            .setColor(0xFFA500)
+            .setTitle(`⚠️ ${user.tag} - Uyarı Geçmişi (${warnings[user.id].length})`)
+            .setDescription(warnList.substring(0, 4000))
+            .setThumbnail(user.displayAvatarURL())
+            .setImage(GIFS.warn)
+            .setFooter({ text: `Sorgulayan: ${message.author.tag}`, iconURL: message.author.displayAvatarURL() })
+            .setTimestamp();
+        
+        await message.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    }
+    
+    // ===== CLEAR KOMUTU =====
+    if (command === 'clear') {
+        const amount = parseInt(args[0]);
+        if (isNaN(amount) || amount < 1 || amount > 100) {
+            return message.reply({ content: '❌ 1-100 arası bir sayı belirtmelisiniz!', flags: MessageFlags.Ephemeral });
+        }
+        
+        try {
+            const messages = await message.channel.bulkDelete(amount, true);
+            
+            const embed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('🧹 Mesajlar Silindi')
+                .addFields(
+                    { name: 'Silinen Mesaj', value: messages.size.toString(), inline: true },
+                    { name: 'Kanal', value: message.channel.toString(), inline: true },
+                    { name: 'Silen', value: message.author.tag, inline: true }
+                )
+                .setImage(GIFS.success)
+                .setTimestamp();
+
+            await sendLog(message.guild, embed);
+            
+            const reply = await message.channel.send({ 
+                content: `✅ ${messages.size} mesaj silindi!` 
+            });
+            setTimeout(() => reply.delete().catch(() => {}), 3000);
+
+        } catch (error) {
+            await message.channel.send({ 
+                content: '❌ 14 günden eski mesajlar silinemez!' 
+            }).then(msg => setTimeout(() => msg.delete().catch(() => {}), 3000));
+        }
+    }
+    
+    // ===== BANLIST KOMUTU =====
+    if (command === 'banlist') {
+        try {
+            const bans = await message.guild.bans.fetch();
+            
+            if (bans.size === 0) {
+                const embed = new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('📋 Ban Listesi')
+                    .setDescription('```\n✨ Sunucuda banlanmış kullanıcı bulunmuyor!\n```')
+                    .setImage(GIFS.success)
+                    .setTimestamp();
+                return message.reply({ embeds: [embed] });
+            }
+
+            let banList = '';
+            let index = 1;
+            
+            bans.forEach(ban => {
+                banList += `**${index}.** \`${ban.user.tag}\` (${ban.user.id})\n`;
+                banList += `   ╰➤ **Sebep:** ${ban.reason || 'Belirtilmemiş'}\n\n`;
+                index++;
+            });
+
+            const embed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle(`📋 Ban Listesi (${bans.size} Kişi)`)
+                .setDescription(banList.substring(0, 4000))
+                .setThumbnail(message.guild.iconURL())
+                .setImage(GIFS.ban)
+                .setFooter({ 
+                    text: `Görüntüleyen: ${message.author.tag} • Toplam: ${bans.size} ban`, 
+                    iconURL: message.author.displayAvatarURL() 
+                })
+                .setTimestamp();
+
+            await message.reply({ embeds: [embed] });
+
+        } catch (error) {
+            await message.reply({ content: '❌ Ban listesi alınırken hata oluştu!' });
+        }
+    }
+    
+    // ===== DUYURU KOMUTU =====
+    if (command === 'duyuru') {
+        const duyuruMesaj = args.join(' ');
+        if (!duyuruMesaj) return message.reply({ content: '❌ Bir duyuru mesajı yazmalısınız!', flags: MessageFlags.Ephemeral });
+        
+        await message.reply({ content: '📨 Duyuru gönderiliyor, bu biraz zaman alabilir...', flags: MessageFlags.Ephemeral });
+        
+        const members = await message.guild.members.fetch();
+        let successCount = 0;
+        let failCount = 0;
+        let basariliListe = [];
+        let dmKapaliListe = [];
+
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('📢 **BlackWell Sunucu Duyurusu**')
+            .setDescription(`\`\`\`\n${duyuruMesaj}\n\`\`\``)
+            .addFields(
+                { name: '👤 Gönderen', value: message.author.tag, inline: true },
+                { name: '🏠 Sunucu', value: message.guild.name, inline: true },
+                { name: '📅 Tarih', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
+            )
+            .setThumbnail(message.guild.iconURL())
+            .setImage(GIFS.success)
+            .setFooter({ text: 'BlackWell Moderasyon', iconURL: message.guild.iconURL() })
+            .setTimestamp();
+
+        for (const [id, member] of members) {
+            if (member.user.bot) continue;
+
+            try {
+                await member.send({ embeds: [embed] });
+                successCount++;
+                basariliListe.push(member.user.tag);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                failCount++;
+                if (error.code === 50007) {
+                    dmKapaliListe.push(member.user.tag);
+                }
+            }
+        }
+
+        const basariliGoster = basariliListe.slice(0, 20).join('\n');
+        const dmKapaliGoster = dmKapaliListe.slice(0, 20).join('\n');
+
+        const sonucEmbed = new EmbedBuilder()
+            .setColor(successCount > 0 ? 0x00FF00 : 0xFF0000)
+            .setTitle('📊 **Duyuru Raporu**')
+            .setDescription(`Duyuru tamamlandı! Detaylar aşağıda:`)
+            .addFields(
+                { name: '✅ Başarılı', value: `**${successCount}** kişi`, inline: true },
+                { name: '❌ Başarısız', value: `**${failCount}** kişi`, inline: true },
+                { name: '📨 Duyuru Mesajı', value: `\`\`\`${duyuruMesaj.substring(0, 100)}${duyuruMesaj.length > 100 ? '...' : ''}\`\`\``, inline: false }
+            )
+            .setImage(GIFS.success)
+            .setTimestamp();
+
+        if (basariliListe.length > 0) {
+            sonucEmbed.addFields({ 
+                name: `✅ Başarılı Olanlar (İlk 20)`, 
+                value: `\`\`\`${basariliGoster || 'Yok'}\`\`\``, 
+                inline: false 
+            });
+        }
+
+        if (dmKapaliListe.length > 0) {
+            sonucEmbed.addFields({ 
+                name: `🔇 DM'si Kapalı Olanlar (İlk 20)`, 
+                value: `\`\`\`${dmKapaliGoster || 'Yok'}\`\`\``, 
+                inline: false 
+            });
+        }
+
+        await sendLog(message.guild, sonucEmbed);
+        await message.reply({ embeds: [sonucEmbed], flags: MessageFlags.Ephemeral });
+
+        duyuruLog.push({
+            mod: message.author.tag,
+            modId: message.author.id,
+            mesaj: duyuruMesaj,
+            basarili: successCount,
+            basarisiz: failCount,
+            dmKapali: dmKapaliListe.length,
+            tarih: new Date().toISOString()
+        });
+        fs.writeFileSync('./duyurulog.json', JSON.stringify(duyuruLog, null, 2));
+    }
+    
+    // ===== İSTATİSTİK KOMUTU =====
+    if (command === 'istatistik') {
+        await message.guild.members.fetch();
+        
+        const totalMembers = message.guild.memberCount;
+        const botCount = message.guild.members.cache.filter(m => m.user.bot).size;
+        const userCount = totalMembers - botCount;
+        const onlineCount = message.guild.members.cache.filter(m => m.presence?.status === 'online').size;
+        const banCount = (await message.guild.bans.fetch()).size;
+        const roleCount = message.guild.roles.cache.size;
+        const channelCount = message.guild.channels.cache.size;
+
+        const embed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle(`📊 ${message.guild.name} İstatistikleri`)
+            .setThumbnail(message.guild.iconURL())
+            .addFields(
+                { name: '👥 Toplam Üye', value: `**${totalMembers}**`, inline: true },
+                { name: '👤 Kullanıcı', value: `**${userCount}**`, inline: true },
+                { name: '🤖 Bot', value: `**${botCount}**`, inline: true },
+                { name: '🟢 Çevrimiçi', value: `**${onlineCount}**`, inline: true },
+                { name: '🔨 Ban Sayısı', value: `**${banCount}**`, inline: true },
+                { name: '🎭 Rol Sayısı', value: `**${roleCount}**`, inline: true },
+                { name: '📺 Kanal Sayısı', value: `**${channelCount}**`, inline: true },
+                { name: '📜 Moderasyon İşlemi', value: `**${modLog.length}**`, inline: true },
+                { name: '📢 Duyuru Sayısı', value: `**${duyuruLog.length}**`, inline: true }
+            )
+            .setImage(GIFS.welcome)
+            .setFooter({ text: `BlackWell Moderasyon`, iconURL: message.guild.iconURL() })
+            .setTimestamp();
+
+        await message.reply({ embeds: [embed] });
     }
 });
 
